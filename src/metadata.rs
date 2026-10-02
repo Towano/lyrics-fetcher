@@ -861,7 +861,15 @@ mod tests {
         let path = directory
             .path()
             .join(std::ffi::OsString::from_vec(b"song\xff.wav".to_vec()));
-        fs::write(&path, wav(Some(&id3()))).unwrap();
+        if !crate::test_support::create_fixture(
+            "non_utf8_audio_metadata",
+            &path,
+            &wav(Some(&id3())),
+        )
+        .unwrap()
+        {
+            return;
+        }
         assert_eq!(
             read_file(&path).unwrap().title.as_deref(),
             Some("A Song (Live)")

@@ -16,6 +16,10 @@ pub mod model;
 mod providers;
 pub mod service;
 
+#[cfg(all(test, unix))]
+#[path = "../tests/support/mod.rs"]
+mod test_support;
+
 const MAX_LYRIC_SIZE: usize = http::MAX_LYRIC_SIZE;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -362,7 +366,9 @@ mod tests {
         let wrong = dir
             .path()
             .join(std::ffi::OsString::from_vec(b"song\xfe.lrc".to_vec()));
-        fs::write(wrong, b"wrong")?;
+        if !crate::test_support::create_fixture("non_utf8_stem_collision", &wrong, b"wrong")? {
+            return Ok(());
+        }
         assert_eq!(
             save_for_track(None, &source, &dir.path().join("target.flac"))?,
             LyricsResult::MissingId

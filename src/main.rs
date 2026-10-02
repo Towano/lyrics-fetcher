@@ -11,6 +11,10 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+#[cfg(all(test, unix))]
+#[path = "../tests/support/mod.rs"]
+mod test_support;
+
 fn command() -> Command {
     Command::new("lyrics-fetcher")
         .version(env!("CARGO_PKG_VERSION"))
@@ -496,7 +500,6 @@ mod tests {
         let output = directory
             .path()
             .join(OsString::from_vec(b"track\xfe.lrc".to_vec()));
-        std::fs::write(&input, []).unwrap();
         let matches = command()
             .try_get_matches_from([
                 OsString::from("lyrics-fetcher"),
@@ -506,6 +509,16 @@ mod tests {
                 output.as_os_str().to_owned(),
             ])
             .unwrap();
+        assert_eq!(
+            matches
+                .get_one::<OsString>("lyrics")
+                .map(OsString::as_os_str),
+            Some(input.as_os_str())
+        );
+        assert_eq!(matches.get_one::<PathBuf>("output"), Some(&output));
+        if !test_support::create_fixture("non_utf8_cli_paths", &input, &[]).unwrap() {
+            return;
+        }
         let options = options(&matches).unwrap();
         let Input::File(path) = options.input else {
             panic!("expected file")

@@ -542,17 +542,25 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn non_utf8_files_are_supported_and_dangling_symlinks_rejected() {
+    fn non_utf8_files_are_supported_when_the_filesystem_accepts_them() {
         use std::os::unix::ffi::OsStringExt;
         let dir = tempfile::tempdir().unwrap();
         let path = dir
             .path()
             .join(std::ffi::OsString::from_vec(b"song\xff.wav".to_vec()));
-        fs::write(&path, []).unwrap();
+        if !crate::test_support::create_fixture("non_utf8_input", &path, &[]).unwrap() {
+            return;
+        }
         assert!(matches!(
             parse_input(path.as_os_str(), "auto", None).unwrap(),
             Input::File(_)
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dangling_symlinks_are_rejected() {
+        let dir = tempfile::tempdir().unwrap();
         let link = dir.path().join("dangling");
         std::os::unix::fs::symlink(dir.path().join("missing"), &link).unwrap();
         assert!(parse_input(link.as_os_str(), "auto", None).is_err());

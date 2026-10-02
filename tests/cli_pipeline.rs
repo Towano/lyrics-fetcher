@@ -178,9 +178,16 @@ mod offline {
         bytes
     }
 
-    fn check(scenario: Scenario) {
+    fn check(scenario: Scenario) -> bool {
         let directory = tempfile::tempdir().unwrap();
         let destination = directory.path().join(&scenario.destination);
+        #[cfg(unix)]
+        if scenario.name == "non_utf8_output" {
+            if !crate::test_support::create_fixture(scenario.name, &destination, &[]).unwrap() {
+                return false;
+            }
+            std::fs::remove_file(&destination).unwrap();
+        }
         if let Some((path, bytes)) = &scenario.audio {
             std::fs::write(directory.path().join(path), bytes).unwrap();
         }
@@ -292,6 +299,7 @@ mod offline {
             "{} unexpected file or leftover temporary",
             scenario.name
         );
+        true
     }
 
     fn tagged_wav() -> Vec<u8> {
@@ -555,11 +563,17 @@ mod offline {
             native.arguments.push(path);
             scenarios.push(native);
         }
-        let count = scenarios.len();
+        let total = scenarios.len();
+        let mut passed = 0;
         for scenario in scenarios {
-            check(scenario);
+            if check(scenario) {
+                passed += 1;
+            }
         }
-        println!("offline CLI pipeline: {count} child-process scenarios passed");
+        println!(
+            "offline CLI pipeline: {passed} child-process scenarios passed; {} skipped",
+            total - passed
+        );
     }
 
     pub(super) fn main() -> ExitCode {

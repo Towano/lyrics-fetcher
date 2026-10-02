@@ -198,7 +198,9 @@ bash -n build.sh
 
 CLI 有两层进程覆盖：`tests/cli.rs` 运行实际发布二进制，检查帮助、参数错误、已有输出和坏音频；`tests/cli_pipeline.rs` 是包含原生产源码的独立测试可执行程序，用仅测试可见的假 Transport 在子进程中走参数解析、resolver、LRCLIB、LRC 校验和保存，包括合成带标签 WAV。后者不测试实际 HTTP/TLS，也不冒充所有来源的线上验证；生产二进制没有 fixture 环境变量或任意 URL 注入开关。
 
-本机最终离线验证（2026-10-01，Droidspaces / aarch64，Rust 1.98.1）：格式检查通过；默认 feature 的 127 项库测试、8 项 CLI 单元测试、5 项脚本测试和 4 项实际二进制进程测试通过，另有 16 个离线 CLI 子进程场景通过；关闭 CLI 的 117 项库测试通过；release 构建、sh/bash 语法、异地中文/空格目录的实际 sh/bash 构建和 `git diff --check` 通过。没有安装/运行缺失的 clippy，也未单独运行 Rust 1.89 或 macOS/Windows 原生矩阵。
+本机离线验证（2026-10-01，Droidspaces / aarch64，Rust 1.98.1）：格式检查通过；默认 feature 的 127 项库测试、8 项 CLI 单元测试、5 项脚本测试和 4 项实际二进制进程测试通过，另有 16 个离线 CLI 子进程场景通过；关闭 CLI 的 117 项库测试通过；release 构建、sh/bash 语法、异地中文/空格目录的实际 sh/bash 构建和 `git diff --check` 通过。没有安装/运行缺失的 clippy，也未在本机单独运行 Rust 1.89 或 macOS/Windows 原生矩阵。
+
+2026-10-02 已核实首次远端 [CI](https://github.com/Towano/lyrics-fetcher/actions/runs/36955394496)：Ubuntu、Windows 和 Rust 1.89 编译检查通过；macOS 在创建非 UTF-8 文件名的 fixture 时返回 `EILSEQ`，三个库测试失败。测试已改为按实际文件系统能力创建这类 fixture：仅 macOS 对非 UTF-8 名称返回 `EILSEQ` 时明确报告该部分跳过，其他错误仍失败；断链符号链接与原始 `OsString` 参数验证仍执行。修复后本机通过 130 项库测试、10 项 CLI 单元测试、5 项脚本测试、4 项实际二进制进程测试和 16 个离线 CLI 子进程场景（0 跳过），关闭 CLI 时 120 项库测试通过。后续远端矩阵是否通过须以对应提交的 CI 结果为准。
 
 `.github/workflows/ci.yml` 在 Ubuntu、macOS、Windows 原生执行格式检查、默认 feature 测试、关闭 CLI 的库测试及 release 构建；另有 Ubuntu / Rust 1.89 的 locked 依赖编译检查。权限仅 `contents: read`，不部署、不上传发布产物。实际验证结果与各平台尚未执行的事项应以交付记录和来源状态表为准，不能由这份命令清单推断“已通过”。
 
