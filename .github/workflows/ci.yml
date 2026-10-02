@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test default features
+        run: cargo test --locked
+      - name: Test library without CLI dependencies
+        run: cargo test --locked --no-default-features --lib
+      - name: Build release CLI
+        run: cargo build --locked --release --bin lyrics-fetcher
+
+  msrv:
+    name: Minimum Rust (1.89)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+      - name: Check locked CLI dependencies
+        run: cargo check --locked --all-targets
+      - name: Check library without CLI dependencies
+        run: cargo check --locked --no-default-features --lib

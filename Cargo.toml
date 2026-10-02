@@ -2,9 +2,32 @@
 name = "lyrics-fetcher"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.89"
+
+[features]
+default = ["cli"]
+cli = ["dep:clap", "dep:lofty"]
+
+[[bin]]
+name = "lyrics-fetcher"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[[test]]
+name = "cli_pipeline"
+path = "tests/cli_pipeline.rs"
+harness = false
+required-features = ["cli"]
 
 [dependencies]
 anyhow = "1.0"
 serde_json = "1.0"
 tempfile = "3.10"
 ureq = "2.12"
+url = "2.5"
+base64 = "0.22"
+aes = "0.8"
+md-5 = "0.10"
+sha1 = "0.10"
+clap = { version = "4.6", optional = true, default-features = false, features = ["std", "help", "usage", "error-context"] }
+lofty = { version = "0.24", optional = true }
