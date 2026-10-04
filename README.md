@@ -1,12 +1,20 @@
+---
+kind: readme
+lang: zh-CN
+---
+
 # lyrics-fetcher
 
 独立的 Rust 歌词库与命令行工具。`-l` 和 `--lyrics` 联网查找普通同步 LRC，支持关键词、歌曲 ID/完整链接和本地音频标签作为查询输入。存在歧义时给出候选，不静默下载第一条；已有歌词文件不会覆盖。
 
-接入范围为网易云音乐、QQ 音乐、酷狗、酷我和 LRCLIB；**酷狗 MixSongID 精确取词和精确详情尚未实现，多份可信歌词候选需进一步选择 `kugou:lrc:歌词ID:公开下载键`，不能视为全面支持**。来源协议、许可边界与**实现/联网验证分开的状态表**见 [docs/providers.md](docs/providers.md)。第三方接口不是稳定公开 API，源码与离线 fixture 的通过不代表服务当前可用。
+接入网易云音乐、QQ 音乐、酷狗、酷我和 LRCLIB。**酷狗 MixSongID 精确取词和精确详情未实现；多份可信歌词需进一步选择 `kugou:lrc:歌词ID:公开下载键`，不能视为全面支持。** 第三方接口不是稳定公开 API，离线测试通过不代表服务在线可用。
+
+- [来源协议与许可边界](docs/providers.md)：接口路线、来源限定 ID、完整链接和固定参考。
+- [项目状态与验证记录](docs/status.md)：按日期记录本机检查、远端 CI 和联网样本，区分实现能力与实际验证。
 
 ## 构建
 
-需要 Rust/Cargo；锁定依赖的最低声明版本为 Rust 1.89，清单相应声明 `rust-version = "1.89"`。尚未单独运行 Rust 1.89 工具链，推荐使用已安装的 stable。脚本不会安装或升级工具。
+需要 Rust/Cargo；最低 Rust 版本声明见 [Cargo.toml](Cargo.toml) 的 `rust-version`。工具链验证结果见[项目状态记录](docs/status.md#远端-ci)。推荐使用已安装的 stable；脚本不会安装或升级工具。
 
 Linux/macOS：
 
@@ -42,7 +50,7 @@ cargo build --locked --release
 .\target\release\lyrics-fetcher.exe --help
 ```
 
-Windows 也可在已有 Git Bash 中执行脚本。Linux/macOS/Windows 的原生 CI 配置已提供，但添加配置不等于远端矩阵已执行。本机 Droidspaces 是 Android 内核上的 GNU/Linux 用户空间；这不等于原生 Android、Termux 或所有 Linux 发行版已实测支持。
+Windows 也可在已有 Git Bash 中执行脚本。[CI 配置](.github/workflows/ci.yml) 使用 Linux/macOS/Windows 原生 runner；对应提交的实际结果见[远端 CI 记录](docs/status.md#远端-ci)。Droidspaces 是 Android 内核上的 GNU/Linux 用户空间，不能由此推断原生 Android、Termux 或所有 Linux 发行版都受支持。
 
 ## 最简单的使用
 
@@ -75,7 +83,7 @@ lyrics-fetcher -l kuwo:数字RID
 lyrics-fetcher -l lrclib:数字记录ID
 ```
 
-示例中的中文 ID 占位符必须替换为真实值。QQ MID 为 14 位字母数字，数字歌曲 ID 必须标明 `id:`；酷狗 hash 为 32 位十六进制，MixSongID 必须标明 `mix:`，但当前 MixSongID 精确取词未实现。酷狗歌词服务返回多份可信歌词时，会给出更细的普通歌词引用：
+示例中的中文 ID 占位符必须替换为真实值。QQ MID 为 14 位字母数字，数字歌曲 ID 必须标明 `id:`；酷狗 hash 为 32 位十六进制，MixSongID 必须标明 `mix:`，但 MixSongID 精确取词未实现。酷狗歌词服务返回多份可信歌词时，会给出更细的普通歌词引用：
 
 ```sh
 lyrics-fetcher --lyrics 'kugou:lrc:歌词ID:公开下载键' --provider kugou -o './song.lrc'
@@ -83,7 +91,7 @@ lyrics-fetcher --lyrics 'kugou:lrc:歌词ID:公开下载键' --provider kugou -o
 
 `accesskey` 是该接口的公开歌词下载键，不是账号 token；应使用程序列出的成对 ID/下载键，不猜测。直接 hash 需要可信歌名、歌手和时长，不能把一个裸 hash 当作已掌握元信息。
 
-网易、酷我和 LRCLIB 使用各自的最多 20 位十进制 ID，ID 不能跨平台互用。十进制部分校验后去除前导零，全零保留为 `0`；QQ MID、酷狗 hash 和下载键不按十进制处理。`--provider auto` 时裸数字默认网易；指定 `qq` 时转换成 `qq:id:数字`，指定 `kuwo` / `lrclib` 时归对应来源；`kugou` 拒绝裸数字，需明确 `mix:`（当前不支持取词）。数字歌名使用：
+来源 ID 的长度、格式与正规化规则见[来源协议](docs/providers.md#共同规则)，ID 不能跨平台互用。`--provider auto` 时裸数字默认网易；指定 `qq` 时转换成 `qq:id:数字`，指定 `kuwo` / `lrclib` 时归对应来源；`kugou` 拒绝裸数字，需明确 `mix:`（但不支持取词）。数字歌名使用：
 
 ```sh
 lyrics-fetcher -l '22' --input-type query
@@ -148,17 +156,13 @@ lyrics-fetcher -l '合作歌曲' --artist '歌手甲' --artist '歌手乙'
 | `4` | 匹配有歧义，需要 `--select 来源:ID` |
 | `5` | 目标已存在，未覆盖 |
 
-多个来源部分失败会保留诊断；网络错误不应被解释为“无歌词”。自动检索不是保证全网唯一匹配，更不是逐个平台尝试同一个数字 ID。酷狗歌词层的多份匹配目前返回错误码 `1` 并列出 `kugou:lrc:歌词ID:公开下载键`，不同于歌曲搜索候选的退出码 `4`；使用列出的精确歌词引用再次下载。
+多个来源部分失败会保留诊断；网络错误不应被解释为“无歌词”。自动检索不保证全网唯一匹配，也不会逐个平台尝试同一个数字 ID。酷狗歌词层的多份匹配返回错误码 `1` 并列出 `kugou:lrc:歌词ID:公开下载键`，不同于歌曲搜索候选的退出码 `4`；使用列出的精确歌词引用再次下载。
 
 ## 网络与资源边界
 
-生产请求只允许固定 HTTPS 域名，校验证书，不跟随重定向，不自动降级到 HTTP，不使用第三方代理或发送账号 Cookie。
+生产请求使用固定 HTTPS 白名单、校验证书，不跟随重定向、不降级到 HTTP、不使用第三方代理或账号 Cookie。请求时限、次数、响应与歌词大小上限、LRCLIB 间隔和限流处理统一见[来源共同规则](docs/providers.md#共同规则)；同步 DNS 不保证能被超时器严格中断。
 
-- 单次请求超时：8 秒；整个查询预算：90 秒，最多 24 次请求。同步 DNS 解析不能保证由这些计时器严格中断，因此不是所有系统上的绝对墙钟截止时间。
-- 每个响应最多 512 KiB；歌词最多 256 KiB，包括 Base64 解码后的大小。当前酷我用 H5 普通行歌词，不接入旧压缩/逐字路线。
-- LRCLIB 请求串行，间隔至少 300 ms。
-- HTTP `429` / `503` 返回限流/繁忙诊断和 `Retry-After`，不自动重试。
-- 本项目只保存普通同步 LRC，不支持翻译、罗马音、逐字 KRC/QRC 输出、登录、音频解密或下载。
+只保存普通同步 LRC，不支持翻译、罗马音、逐字 KRC/QRC 输出、登录、音频解密或下载。酷我使用 H5 普通行歌词，不接入旧压缩/逐字路线。
 
 ## Rust 库
 
@@ -196,13 +200,9 @@ bash -n build.sh
 
 `cargo test` 的单元/集成测试只使用本地 fixture、假 Transport 和假 Cargo，不依赖真实服务或外网；Cargo 下载缺失依赖与测试本身访问服务是两件事。shell 测试仅在 Unix 启用，bash 不存在时跳过 bash 子项，不安装工具。
 
-CLI 有两层进程覆盖：`tests/cli.rs` 运行实际发布二进制，检查帮助、参数错误、已有输出和坏音频；`tests/cli_pipeline.rs` 是包含原生产源码的独立测试可执行程序，用仅测试可见的假 Transport 在子进程中走参数解析、resolver、LRCLIB、LRC 校验和保存，包括合成带标签 WAV。后者不测试实际 HTTP/TLS，也不冒充所有来源的线上验证；生产二进制没有 fixture 环境变量或任意 URL 注入开关。
+CLI 有两层进程覆盖：[`tests/cli.rs`](tests/cli.rs) 运行 Cargo 构建的真实 CLI 二进制（默认测试命令使用 test/debug profile，不是独立 release 构建的产物），检查帮助、参数错误、已有输出和坏音频；[`tests/cli_pipeline.rs`](tests/cli_pipeline.rs) 是包含生产源码的独立测试程序，用仅测试可见的假 Transport 在子进程中走参数解析、resolver、LRCLIB、LRC 校验和保存，包括合成带标签 WAV。后者不测试实际 HTTP/TLS，也不代表所有来源的线上验证；生产二进制没有 fixture 环境变量或任意 URL 注入开关。
 
-本机离线验证（2026-10-01，Droidspaces / aarch64，Rust 1.98.1）：格式检查通过；默认 feature 的 127 项库测试、8 项 CLI 单元测试、5 项脚本测试和 4 项实际二进制进程测试通过，另有 16 个离线 CLI 子进程场景通过；关闭 CLI 的 117 项库测试通过；release 构建、sh/bash 语法、异地中文/空格目录的实际 sh/bash 构建和 `git diff --check` 通过。没有安装/运行缺失的 clippy，也未在本机单独运行 Rust 1.89 或 macOS/Windows 原生矩阵。
-
-2026-10-02 已核实首次远端 [CI](https://github.com/Towano/lyrics-fetcher/actions/runs/36955394496)：Ubuntu、Windows 和 Rust 1.89 编译检查通过；macOS 在创建非 UTF-8 文件名的 fixture 时返回 `EILSEQ`，三个库测试失败。测试已改为按实际文件系统能力创建这类 fixture：仅 macOS 对非 UTF-8 名称返回 `EILSEQ` 时明确报告该部分跳过，其他错误仍失败；断链符号链接与原始 `OsString` 参数验证仍执行。修复后本机通过 130 项库测试、10 项 CLI 单元测试、5 项脚本测试、4 项实际二进制进程测试和 16 个离线 CLI 子进程场景（0 跳过），关闭 CLI 时 120 项库测试通过。后续远端矩阵是否通过须以对应提交的 CI 结果为准。
-
-`.github/workflows/ci.yml` 在 Ubuntu、macOS、Windows 原生执行格式检查、默认 feature 测试、关闭 CLI 的库测试及 release 构建；另有 Ubuntu / Rust 1.89 的 locked 依赖编译检查。权限仅 `contents: read`，不部署、不上传发布产物。实际验证结果与各平台尚未执行的事项应以交付记录和来源状态表为准，不能由这份命令清单推断“已通过”。
+[CI 配置](.github/workflows/ci.yml) 在 Ubuntu、macOS、Windows 原生执行格式检查、默认 feature 测试、关闭 CLI 的库测试及 release 构建；另有 Ubuntu / Rust 1.89 的 locked 依赖编译检查。权限仅 `contents: read`，不部署、不上传发布产物。日期化的[本机检查](docs/status.md#本机离线验证)、[远端 CI](docs/status.md#远端-ci) 与[联网样本](docs/status.md#2026-10-01-联网样本) 分开记录，不能由命令或配置清单推断“已通过”。
 
 ## 参考与许可
 

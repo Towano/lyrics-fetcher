@@ -1,3 +1,8 @@
+---
+kind: reference
+lang: zh-CN
+---
+
 # AGENTS.md
 
 ## 项目范围
